@@ -13,7 +13,7 @@ x-defaults: &defaults
 services:
   grafana:
     <<: *defaults
-    image: grafana/grafana:12.4.16@sha256:982fa6bf18cc38280a30bf08c3b673486067d4805b25a9d4756688a689a993c7
+    image: grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
     ports:
       - '127.0.0.1:3000:3000'
     environment:
