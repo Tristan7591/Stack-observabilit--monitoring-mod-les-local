@@ -1,0 +1,2343 @@
+{
+  "title": "Codex · Usage et performances",
+  "uid": "codex-usage",
+  "description": "Usage Codex, percentiles par modèle, échantillons, latences instrumentées, transport et santé des spans.",
+  "tags": [
+    "codex",
+    "usage",
+    "opentelemetry"
+  ],
+  "schemaVersion": 39,
+  "version": 2,
+  "editable": false,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "refresh": "15s",
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "15s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "Tableaux Codex",
+      "tags": [
+        "codex"
+      ],
+      "asDropdown": true,
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Évaluation synthétique",
+      "url": "/d/codex-evaluation",
+      "targetBlank": false,
+      "icon": "external link"
+    },
+    {
+      "type": "link",
+      "title": "Catalogue des métriques Codex",
+      "url": "https://learn.chatgpt.com/docs/config-file/config-advanced#metrics-catalog",
+      "targetBlank": true,
+      "icon": "doc"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Tokens sur la période",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Somme estimée du compteur natif de tokens totaux pendant la période sélectionnée.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"total\"}[$__range]))",
+          "legendFormat": "Tokens sur la période",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Entrée en cache",
+      "type": "stat",
+      "gridPos": {
+        "x": 4,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Part des tokens d’entrée déjà présents dans le cache de contexte pendant la période sélectionnée.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"cached_input\"}[$__range])) or (0 * sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"input\"}[$__range])))) / (sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"input\"}[$__range])) > 0)",
+          "legendFormat": "Entrée en cache",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 16,
+      "title": "Tours observés",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Augmentation estimée du compteur de l’histogramme de latence complète sur la période.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$__range]))",
+          "legendFormat": "Tours",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 18,
+      "title": "Latence du tour · p50",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Médiane estimée sur la période, pour les modèles sélectionnés.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$__range]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$__range])) >= 1)",
+          "legendFormat": "p50",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Latence du tour · p95",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Estimation sur la période et les modèles sélectionnés. Le p95 est masqué en dessous de 20 observations.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$__range]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$__range])) >= 20)",
+          "legendFormat": "Latence du tour · p95",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Premier token · p95",
+      "type": "stat",
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Estimation sur la période et les modèles sélectionnés. Le p95 est masqué en dessous de 20 observations.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$__range]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$__range])) >= 20)",
+          "legendFormat": "Premier token · p95",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 50,
+      "type": "row",
+      "title": "Tokens et cache",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 5,
+      "title": "Débit agrégé de tokens sur le temps écoulé",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 14,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Tokens par seconde écoulée sur la fenêtre Grafana, pauses et outils compris. Les catégories cache et raisonnement sont des sous-ensembles de l’entrée et de la sortie.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"input\"}[$__rate_interval]))",
+          "legendFormat": "Entrée",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"cached_input\"}[$__rate_interval]))",
+          "legendFormat": "Entrée en cache",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"output\"}[$__rate_interval]))",
+          "legendFormat": "Sortie",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"reasoning_output\"}[$__rate_interval]))",
+          "legendFormat": "Raisonnement",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: tok/s",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Entrée"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Entrée en cache"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sortie"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Raisonnement"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Tokens par type sur la période",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 14,
+        "y": 5,
+        "w": 10,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Ventilation estimée sur la période sélectionnée. Les catégories en cache et raisonnement sont incluses dans l’entrée et la sortie.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"input\"}[$__range]))",
+          "legendFormat": "Entrée",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"cached_input\"}[$__range]))",
+          "legendFormat": "Entrée en cache",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"output\"}[$__range]))",
+          "legendFormat": "Sortie",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"reasoning_output\"}[$__range]))",
+          "legendFormat": "Raisonnement",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Part des tokens d’entrée en cache",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Part glissante calculée sur les tokens d’entrée. La série est vide pendant les fenêtres sans tokens d’entrée.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"cached_input\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"input\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_turn_token_usage(_tokens)?_sum\",token_type=\"input\"}[$__rate_interval])) > 0)",
+          "legendFormat": "Entrée en cache",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Entrée en cache"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Consultations du cache des outils MCP",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Consultations du catalogue des outils MCP, ventilées selon l’état du cache. Les séries apparaissent lorsqu’une consultation est instrumentée.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (cache) (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_mcp_tools_list_duration_ms(_milliseconds)?_count\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{cache}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: consult./min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 51,
+      "type": "row",
+      "title": "Latences et taille d’échantillon",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 7,
+      "title": "Latence complète d’un tour",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Estimations calculées à partir des classes des histogrammes. Par modèle et fenêtre glissante, p50 à partir d’une observation, p95 de 20 et p99 de 100. Ces seuils limitent les très petits échantillons.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 1)",
+          "legendFormat": "p50 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "p95 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 100)",
+          "legendFormat": "p99 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "title": "Temps avant le premier token",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Estimations calculées à partir des classes des histogrammes. Par modèle et fenêtre glissante, p50 à partir d’une observation, p95 de 20 et p99 de 100. Ces seuils limitent les très petits échantillons.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 1)",
+          "legendFormat": "p50 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "p95 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 100)",
+          "legendFormat": "p99 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "title": "Observations dans la fenêtre glissante",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Effectifs estimés des histogrammes par modèle. Les tours sans premier token mesuré peuvent contribuer au total de latence complète uniquement.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window]))",
+          "legendFormat": "Tours · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_ttft_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window]))",
+          "legendFormat": "Premier token · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Temps entre tokens · moteur Responses API",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 30,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Mesure optionnelle publiée par le service Responses API via WebSocket. Les percentiles décrivent la distribution des observations inter-token remontées par le moteur.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_engine_service_tbt_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_engine_service_tbt_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 1)",
+          "legendFormat": "p50 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_engine_service_tbt_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_engine_service_tbt_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "p95 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (model, le) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_engine_service_tbt_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (model) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_engine_service_tbt_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 100)",
+          "legendFormat": "p99 · {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "title": "Latence par signal instrumenté · p95",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Signaux distincts, conditionnés par le transport et la version de Codex. Chaque courbe utilise au moins 20 observations de sa propre métrique. Les durées peuvent se recouvrir.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_api_request_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_api_request_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "Requête HTTP",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "Requête WebSocket",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_tool_call_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_tool_call_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "Appel d’outil",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_inference_time_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_inference_time_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "Inférence Responses API",
+          "instant": false,
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_overhead_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_responses_api_overhead_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
+          "legendFormat": "Surcoût Responses API",
+          "instant": false,
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Chemin critique du tour · temps moyen par composante",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 38,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "L’inférence inclut la compaction. Les autres composantes couvrent les outils, l’examen automatique, l’attente utilisateur, le surcoût et la durée non classée. Ce signal dépend de la version et de la capture complète par Codex.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (component) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_critical_path_component_ms(_milliseconds)?_sum\",model=~\"$model\"}[$latency_window])) / (sum by (component) (increase({job=\"codex-otlp\",__name__=~\"codex_turn_critical_path_component_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) > 0)",
+          "legendFormat": "{{component}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 52,
+      "type": "row",
+      "title": "Transport, outils et approbations",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 8,
+      "title": "Requêtes vers le modèle",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Fréquence de requêtes enregistrées par Codex, selon le transport.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_total\"}[$__rate_interval])) * 60",
+          "legendFormat": "HTTP",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_total\"}[$__rate_interval])) * 60",
+          "legendFormat": "WebSocket",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: req/min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HTTP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WebSocket"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "title": "Codes HTTP",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 47,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Tentatives HTTP instrumentées par statut. Un échec de transport peut arriver avant la réception d’un statut.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (status) (rate({job=\"codex-otlp\",__name__=~\"codex_api_request_total\",model=~\"$model\",status=~\"[1-5]..\"}[$__rate_interval])) * 60",
+          "legendFormat": "HTTP {{status}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "title": "Part des tentatives en échec",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Les ratios sont conditionnés à la présence d’observations avec résultat explicite. Les trois séries utilisent chacune leur propre dénominateur.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum (rate({job=\"codex-otlp\",__name__=~\"codex_api_request_total\",model=~\"$model\",success=\"false\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",__name__=~\"codex_api_request_total\",model=~\"$model\",success=~\"true|false\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",__name__=~\"codex_api_request_total\",model=~\"$model\",success=~\"true|false\"}[$__rate_interval])) > 0)",
+          "legendFormat": "HTTP",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum (rate({job=\"codex-otlp\",__name__=~\"codex_websocket_request_total\",model=~\"$model\",success=\"false\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",__name__=~\"codex_websocket_request_total\",model=~\"$model\",success=~\"true|false\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",__name__=~\"codex_websocket_request_total\",model=~\"$model\",success=~\"true|false\"}[$__rate_interval])) > 0)",
+          "legendFormat": "WebSocket",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum (rate({job=\"codex-otlp\",__name__=~\"codex_tool_call_total\",model=~\"$model\",success=\"false\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",__name__=~\"codex_tool_call_total\",model=~\"$model\",success=~\"true|false\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",__name__=~\"codex_tool_call_total\",model=~\"$model\",success=~\"true|false\"}[$__rate_interval])) > 0)",
+          "legendFormat": "Outils",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "title": "Connexions et replis de transport",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 55,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Comptages natifs d’ouvertures WebSocket et de replis vers HTTP. Les ouvertures comprennent les premières connexions.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",__name__=~\"codex_websocket_connect_total\",model=~\"$model\"}[$__rate_interval])) * 60",
+          "legendFormat": "Ouvertures WebSocket",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",__name__=~\"codex_transport_fallback_to_http_total\",model=~\"$model\"}[$__rate_interval])) * 60",
+          "legendFormat": "Replis vers HTTP",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Appels d’outils",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Débit total, échecs signalés et activité du sous-système MCP.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_tool_call_total\"}[$__rate_interval])) * 60",
+          "legendFormat": "Tous les outils Codex",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_tool_call_total\",success=\"false\"}[$__rate_interval])) * 60",
+          "legendFormat": "Échecs d’outils Codex",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_mcp_call_total\"}[$__rate_interval])) * 60",
+          "legendFormat": "Appels MCP",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: appels/min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tous les outils Codex"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Échecs d’outils Codex"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Appels MCP"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Outils les plus appelés",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 63,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Volume estimé d’appels pour les huit outils les plus utilisés pendant la période sélectionnée.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "topk(8, sum by (tool) (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_tool_call_total\"}[$__range])) > 0)",
+          "legendFormat": "{{tool}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": false,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 28,
+      "title": "Durée par outil · p95",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 71,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Jusqu’à huit outils classés par p95 décroissant à chaque instant. Chaque outil doit avoir au moins 20 mesures dans la fenêtre glissante.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "topk(8, histogram_quantile(0.95, sum by (tool, le) (increase({job=\"codex-otlp\",__name__=~\"codex_tool_call_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum by (tool) (increase({job=\"codex-otlp\",__name__=~\"codex_tool_call_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20))",
+          "legendFormat": "{{tool}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 26,
+      "title": "Résultats d’outils MCP",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 71,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Appels MCP instrumentés par statut. Certaines opérations bloquées peuvent être comptées sans nom d’outil.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (status) (rate({job=\"codex-otlp\",__name__=~\"codex_mcp_call_total\",model=~\"$model\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{status}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "title": "Décisions d’approbation",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 79,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Résultats des demandes d’approbation Codex, par décision. Les durées d’attente disponibles figurent dans le chemin critique du tour.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (approved) (rate({job=\"codex-otlp\",__name__=~\"codex_approval_requested_total\",model=~\"$model\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{approved}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 53,
+      "type": "row",
+      "title": "Santé des services · tous modèles",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 86,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 13,
+      "title": "Spans par service",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 87,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Nombre de spans reçus par Tempo et agrégés par service.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service) (rate(traces_spanmetrics_calls_total[$__rate_interval])) * 60",
+          "legendFormat": "{{service}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: spans/min",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Spans en erreur par service",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 8,
+        "y": 87,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Proportion de spans dont le statut OpenTelemetry est STATUS_CODE_ERROR.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum by (service) (rate(traces_spanmetrics_calls_total{status_code=\"STATUS_CODE_ERROR\"}[$__rate_interval])) or (0 * sum by (service) (rate(traces_spanmetrics_calls_total[$__rate_interval])))) / (sum by (service) (rate(traces_spanmetrics_calls_total[$__rate_interval])) > 0)",
+          "legendFormat": "{{service}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "Durée des spans par service · p95",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 16,
+        "y": 87,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "95e percentile estimé des durées de spans générées par Tempo.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traces_spanmetrics_latency_bucket[$__rate_interval])))",
+          "legendFormat": "{{service}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "noValue": "—",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": false,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "model",
+        "label": "Modèle",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values({job=\"codex-otlp\",__name__=~\"codex_turn_e2e_duration_ms(_milliseconds)?_count|codex_turn_token_usage(_tokens)?_count\"}, model)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "latency_window",
+        "label": "Fenêtre des percentiles",
+        "type": "custom",
+        "query": "5m,15m,30m,1h",
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "selected": true,
+          "text": "15m",
+          "value": "15m"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": true,
+            "text": "15m",
+            "value": "15m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          }
+        ]
+      }
+    ]
+  }
+}

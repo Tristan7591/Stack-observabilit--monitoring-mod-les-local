@@ -1,0 +1,127 @@
+name: Validation and image security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  FIXTURE_IMAGE: codex-observability-fixture:ci
+
+jobs:
+  validate:
+    name: Source and privacy checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Isolate the fixture runtime
+        run: printf 'CODEX_OBSERVABILITY_RUNTIME_DIR=%s/codex-ci/CodexObservability\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+
+      - name: Check the Git index and committed configuration
+        run: |
+          python3 ci/check_release_tree.py
+          python3 ci/check_dashboards.py
+          pwsh -NoProfile -NonInteractive -File ci/check-powershell.ps1
+          docker compose config --format json | python3 ci/check_compose.py
+
+      - name: Set up pinned scanners
+        run: bash ci/install-tools.sh actionlint trivy
+
+      - name: Lint workflow and scan tracked sources
+        run: |
+          actionlint
+          bash ci/scan-source.sh
+
+  build-test-scan:
+    name: Buildx, integration test and image scan
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DOCKER_BUILD_SUMMARY: 'false'
+      DOCKER_BUILD_RECORD_UPLOAD: 'false'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Isolate the fixture runtime
+        run: printf 'CODEX_OBSERVABILITY_RUNTIME_DIR=%s/codex-ci/CodexObservability\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          version: v0.39.1
+          cache-binary: false
+          buildkitd-flags: '--debug=false'
+          driver-opts: image=moby/buildkit:v0.35.1@sha256:baf6138eb8c37644800c7c913fba051e840ebb9ba13eaf92d92ef9a1712d0b4c
+
+      - name: Validate the fixture Dockerfile
+        run: docker buildx build --check --file fixtures/Dockerfile fixtures
+
+      - name: Build the local synthetic fixture image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./fixtures
+          file: ./fixtures/Dockerfile
+          platforms: linux/amd64
+          tags: ${{ env.FIXTURE_IMAGE }}
+          load: true
+          push: false
+          network: none
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=codex-synthetic-fixture
+          cache-to: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && 'type=gha,scope=codex-synthetic-fixture,mode=min,ignore-error=true' || '' }}
+
+      - name: Pull pinned services and validate their configuration
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges "$FIXTURE_IMAGE" self-test
+          bash ci/prepare-fixtures.sh
+          docker compose pull --quiet
+          docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus check config /etc/prometheus/prometheus.yml
+          docker compose run --rm --no-deps otel-collector validate --config=/etc/otelcol-contrib/config.yaml
+
+      - name: Start the disposable stack and verify synthetic telemetry
+        run: |
+          docker compose up --detach --no-build --pull never --wait --wait-timeout 90
+          curl --fail --silent --show-error --max-time 5 --retry 20 --retry-delay 1 --retry-all-errors \
+            http://127.0.0.1:3000/api/health > /dev/null
+          bash ci/prepare-fixtures.sh
+          docker run --rm --network codex-observability_default --read-only --cap-drop ALL --security-opt no-new-privileges \
+            "$FIXTURE_IMAGE" emit --endpoint http://otel-collector:4318
+          pwsh -NoProfile -NonInteractive -File Test-Stack.ps1 -RequireHostMetrics -TimeoutSeconds 90 -MaxHostAgeSeconds 120
+          python3 ci/check_dashboards.py --live
+          query='http://127.0.0.1:9090/api/v1/query?query=count%28codex_fixture_attempt_success%29'
+          docker compose exec -T prometheus wget -q -O - "$query" \
+            | jq -e '.data.result[0].value[1] | tonumber == 6' > /dev/null
+
+      - name: Set up pinned image scanner
+        if: ${{ !cancelled() }}
+        run: bash ci/install-tools.sh trivy
+
+      - name: Scan exact runtime and fixture images for vulnerabilities
+        if: ${{ !cancelled() }}
+        run: bash ci/scan-images.sh
+
+      - name: Remove synthetic containers and volumes
+        if: ${{ always() }}
+        run: docker compose down --volumes --remove-orphans

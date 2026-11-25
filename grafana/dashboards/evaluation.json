@@ -1,0 +1,338 @@
+{
+  "title": "Codex · Évaluation synthétique",
+  "uid": "codex-evaluation",
+  "description": "Résultats de contrôles déterministes sur des tâches fictives du dépôt.",
+  "tags": [
+    "codex",
+    "evaluation",
+    "synthetique"
+  ],
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Tentatives synthétiques",
+      "description": "Nombre de combinaisons tâche et variante dans le dernier lot publié.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(codex_fixture_attempt_success{job=\"codex-otlp\"})",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{task}} · {{variant}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Références réussies",
+      "description": "Tentatives de référence qui passent les contrôles de résultat et de périmètre.",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(codex_fixture_attempt_success{job=\"codex-otlp\",variant=\"reference\"})",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{task}} · {{variant}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Cas négatifs détectés",
+      "description": "Variantes de régression ou de périmètre que les contrôles ont rejetées.",
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "value",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(codex_fixture_attempt_success{job=\"codex-otlp\",variant!=\"reference\"} == 0)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{task}} · {{variant}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Résultat par tentative",
+      "description": "1 indique un résultat et un périmètre valides. Les échecs des variantes négatives sont attendus.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_fixture_attempt_success{job=\"codex-otlp\"}",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "{{task}} · {{variant}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "exported_job": true,
+              "otel_scope_name": true,
+              "otel_scope_version": true
+            },
+            "renameByName": {
+              "task": "Tâche",
+              "variant": "Variante",
+              "Value": "Verdict"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Part des contrôles fonctionnels réussis",
+      "description": "La note fonctionnelle ignore la vérification du périmètre. Les deux critères sont utilisés dans le verdict.",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_fixture_check_pass_ratio{job=\"codex-otlp\"}",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{task}} · {{variant}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Durée de vérification des fixtures",
+      "description": "Temps du contrôle déterministe sur les données synthétiques.",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_fixture_runtime_seconds{job=\"codex-otlp\"}",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{task}} · {{variant}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Modifications hors périmètre",
+      "description": "Nombre de chemins fictifs modifiés en dehors du périmètre déclaré.",
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_fixture_scope_violations{job=\"codex-otlp\"}",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{task}} · {{variant}}"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "title": "Vue d’ensemble",
+      "type": "link",
+      "url": "/d/codex-overview",
+      "targetBlank": false
+    },
+    {
+      "title": "Usage et latences",
+      "type": "link",
+      "url": "/d/codex-usage",
+      "targetBlank": false
+    }
+  ]
+}

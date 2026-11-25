@@ -1,0 +1,31 @@
+groups:
+  - name: codex-observability
+    rules:
+      - alert: CodexWindowsCollectorStale
+        expr: absent(codex_host_collector_last_success_timestamp_seconds) or (time() - codex_host_collector_last_success_timestamp_seconds > 45)
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Le collecteur Windows ne publie plus de mesures récentes
+      - alert: CodexObservabilityTargetDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Cible Prometheus indisponible ({{ $labels.instance }})'
+      - alert: CodexWindowsMemoryLow
+        expr: codex_host_memory_available_bytes / codex_host_memory_total_bytes < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Il reste moins de 10 % de mémoire disponible sur Windows
+      - alert: CodexWindowsVolumeLow
+        expr: codex_host_volume_free_bytes / codex_host_volume_size_bytes < 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Il reste moins de 10 % d’espace sur {{ $labels.volume }}'

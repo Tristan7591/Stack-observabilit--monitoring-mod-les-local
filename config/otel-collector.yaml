@@ -1,0 +1,76 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 384
+    spike_limit_mib: 96
+  delta_to_cumulative:
+    max_stale: 1h
+    max_streams: 20000
+  transform/privacy:
+    error_mode: propagate
+    log_statements:
+      - keep_keys(resource.attributes, ["service.name", "service.version", "deployment.environment", "deployment.environment.name", "env"])
+      - 'keep_keys(log.attributes, ["event.name", "event.kind", "event.timestamp", "conversation.id", "app.version", "model", "model_provider", "duration_ms", "status", "success", "http.response.status_code", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "tool_token_count", "total_token_count", "tool_name", "tool_namespace", "call_id", "tool_result_seq", "event_type", "source", "transport", "attempt", "retry_count", "decision"])'
+      - set(log.body, "codex.event")
+      - set(log.body, log.attributes["event.name"]) where IsString(log.attributes["event.name"]) and IsMatch(log.attributes["event.name"], "^codex[.][a-zA-Z0-9_.-]+$")
+    trace_statements:
+      - context: resource
+        statements:
+          - keep_keys(resource.attributes, ["service.name", "service.version", "deployment.environment", "deployment.environment.name", "env"])
+      - context: span
+        statements:
+          - 'keep_keys(span.attributes, ["conversation.id", "codex.conversation.id", "codex.turn.id", "turn.id", "call_id", "tool_name", "tool.name", "gen_ai.tool.name", "gen_ai.operation.name", "gen_ai.request.model", "gen_ai.response.model", "gen_ai.provider.name", "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_write.input_tokens", "codex.usage.reasoning_output_tokens", "codex.usage.total_tokens", "model", "duration_ms", "http.request.method", "http.response.status_code", "status", "success", "error.type", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "tool_token_count", "total_token_count", "source", "transport"])'
+          - set(span.name, "codex.span") where not IsMatch(span.name, "^[a-zA-Z0-9_.:/-]{1,160}$")
+          - set(span.status.message, "")
+      - context: spanevent
+        statements:
+          - set(spanevent.name, "codex.span_event")
+          - keep_keys(spanevent.attributes, ["event.name", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "total_token_count", "error.type"])
+    metric_statements:
+      - keep_keys(resource.attributes, ["service.name", "service.version", "service.instance.id", "process.pid", "deployment.environment", "deployment.environment.name", "env"])
+      - delete_matching_keys(datapoint.attributes, "(?i)^(user[._]|account[._]|host[._]|conversation[._]|prompt$|arguments$|output$|error[.]message$|command([._]|$)|url([._]|$)|path([._]|$))")
+  batch:
+    timeout: 1s
+    send_batch_size: 512
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    metric_expiration: 1h
+    enable_open_metrics: true
+    translation_strategy: UnderscoreEscapingWithSuffixes
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+  otlp_grpc/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+service:
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/privacy, delta_to_cumulative, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/privacy, batch]
+      exporters: [otlp_http/loki]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/privacy, batch]
+      exporters: [otlp_grpc/tempo]
