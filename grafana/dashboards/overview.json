@@ -6,7 +6,7 @@
     "local"
   ],
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "editable": false,
   "time": {
     "from": "now-1h",
@@ -18,6 +18,13 @@
       "title": "Processus et caches Windows",
       "type": "link",
       "url": "/d/codex-windows",
+      "targetBlank": false
+    },
+    {
+      "title": "Requêtes et transport",
+      "type": "link",
+      "url": "/d/codex-requests",
+      "keepTime": true,
       "targetBlank": false
     },
     {

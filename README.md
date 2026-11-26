@@ -18,6 +18,8 @@ Connectez-vous à [Grafana](http://127.0.0.1:3000) avec l’identifiant `admin`.
 | [Vue d’ensemble](http://127.0.0.1:3000/d/codex-overview) | Santé de la stack, fraîcheur du collecteur et alertes locales. |
 | [Processus et caches Windows](http://127.0.0.1:3000/d/codex-windows) | CPU, mémoire, threads, handles, entrées-sorties et caches par famille. |
 | [Usage et latences Codex](http://127.0.0.1:3000/d/codex-usage) | Tokens, cache de prompts, latences, outils, requêtes et état des services. |
+| [Réseau Windows et sonde fournisseur](http://127.0.0.1:3000/d/codex-network) | Connexions TCP par état et par PID, mesures DNS, TCP et TLS de la sonde optionnelle. |
+| [Requêtes Codex](http://127.0.0.1:3000/d/codex-requests) | Tentatives HTTP, envois WebSocket, replis de transport et liens vers les traces. |
 | [Évaluation synthétique](http://127.0.0.1:3000/d/codex-evaluation) | Résultat et durée de scénarios fictifs, séparés de la télémétrie Codex. |
 | Journaux et traces | Accédez à Loki et Tempo via les liens du dashboard **Vue d’ensemble** ou via **Explore** dans Grafana. |
 
@@ -25,6 +27,7 @@ Connectez-vous à [Grafana](http://127.0.0.1:3000) avec l’identifiant `admin`.
 
 - [Architecture, ports et conservation](docs/architecture.md)
 - [Catalogue et interprétation des métriques](docs/mesures.md)
+- [Réseau, requêtes fournisseur et rapport de consommation](docs/reseau-et-requetes.md)
 - [Exploitation, mise à niveau et dépannage](docs/exploitation.md)
 - [Scénarios d’évaluation et critères de réussite](docs/evaluation.md)
 - [GitHub Actions, images Docker et confidentialité](docs/ci-et-confidentialite.md)

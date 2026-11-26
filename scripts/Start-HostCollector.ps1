@@ -45,6 +45,16 @@ namespace CodexObservability {
         private const uint SnapshotProcesses = 2;
         private const uint QueryLimitedInformation = 0x1000;
         private const int ErrorNoMoreFiles = 18;
+        private const uint ErrorInsufficientBuffer = 122;
+        private const uint AddressFamilyIPv4 = 2;
+        private const uint AddressFamilyIPv6 = 23;
+        private const int TcpTableOwnerPidAll = 5;
+        private const int TcpStateListen = 2;
+        private static readonly string[] TcpStates = {
+            "unknown", "closed", "listen", "syn_sent", "syn_received", "established", "fin_wait_1",
+            "fin_wait_2", "close_wait", "closing", "last_ack", "time_wait", "delete_tcb"
+        };
+        private static readonly string[] TcpCategories = { "loopback", "tls_port", "other" };
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct ProcessEntry {
@@ -76,6 +86,30 @@ namespace CodexObservability {
                 TotalVirtual, AvailableVirtual, AvailableExtendedVirtual;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Tcp4Row {
+            public uint State, LocalAddress, LocalPort, RemoteAddress, RemotePort, Pid;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Tcp6Address {
+            public uint Word0, Word1, Word2, Word3;
+
+            public bool IsLoopback() {
+                // Win32 supplies network bytes. Windows reads these DWORDs in little-endian order.
+                return Word0 == 0 && Word1 == 0 && ((Word2 == 0 && Word3 == 0x01000000)
+                    || (Word2 == 0xffff0000 && (Word3 & 0xff) == 127));
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Tcp6Row {
+            public Tcp6Address LocalAddress;
+            public uint LocalScopeId, LocalPort;
+            public Tcp6Address RemoteAddress;
+            public uint RemoteScopeId, RemotePort, State, Pid;
+        }
+
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr CreateToolhelp32Snapshot(uint flags, uint pid);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -102,6 +136,9 @@ namespace CodexObservability {
         private static extern bool GlobalMemoryStatusEx(ref MemoryStatus status);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern bool MoveFileExW(string source, string destination, uint flags);
+        [DllImport("iphlpapi.dll")]
+        private static extern uint GetExtendedTcpTable(IntPtr table, ref int size,
+            [MarshalAs(UnmanagedType.Bool)] bool sort, uint addressFamily, int tableClass, uint reserved);
 
         public sealed class Sample {
             public uint Pid, Parent, Threads;
@@ -110,6 +147,24 @@ namespace CodexObservability {
             public double? CpuSeconds;
             public uint? Handles;
             public ulong? WorkingSet, PrivateBytes, ReadBytes, WriteBytes;
+        }
+
+        public sealed class TcpCount {
+            public uint Pid;
+            public string State, Category;
+            public int Count;
+        }
+
+        public sealed class TcpSnapshot {
+            public string Family;
+            public bool Success;
+            public List<TcpCount> Counts = new List<TcpCount>();
+            public List<TcpCount> Totals = new List<TcpCount>();
+        }
+
+        public sealed class HostSnapshot {
+            public List<Sample> Processes;
+            public TcpSnapshot[] Tcp;
         }
 
         private sealed class ProcessRecord {
@@ -123,7 +178,7 @@ namespace CodexObservability {
                 && path.Length > root.Length && path[root.Length] == '\\';
         }
 
-        public static List<Sample> Collect(string desktopRoot, string runtimeRoot, string codexHome,
+        public static HostSnapshot Collect(string desktopRoot, string runtimeRoot, string codexHome,
             uint collectorPid, Dictionary<uint, long> previousFamily) {
             var records = new Dictionary<uint, ProcessRecord>();
             var snapshot = CreateToolhelp32Snapshot(SnapshotProcesses, 0);
@@ -211,13 +266,109 @@ namespace CodexObservability {
                     }
                     selected.Add(sample);
                 }
-                return selected;
+                // Query the TCP tables before closing the handles of the processes observed above.
+                var pids = new HashSet<uint>();
+                foreach (var sample in selected) pids.Add(sample.Pid);
+                return new HostSnapshot {
+                    Processes = selected,
+                    Tcp = new[] { CollectTcp(pids, AddressFamilyIPv4, "ipv4"), CollectTcp(pids, AddressFamilyIPv6, "ipv6") }
+                };
             } finally {
                 CloseHandle(snapshot);
                 foreach (var record in records.Values) {
                     if (record.Handle != IntPtr.Zero) CloseHandle(record.Handle);
                 }
             }
+        }
+
+        private static int DecodeTcpPort(uint networkPort) {
+            return (int)(((networkPort & 0xff) << 8) | ((networkPort >> 8) & 0xff));
+        }
+
+        private static int TcpCategory(bool loopback, uint localPort, uint remotePort) {
+            if (loopback) return 0;
+            int local = DecodeTcpPort(localPort);
+            int remote = DecodeTcpPort(remotePort);
+            return local == 443 || remote == 443 || local == 8443 || remote == 8443 ? 1 : 2;
+        }
+
+        private static TcpSnapshot CollectTcp(HashSet<uint> pids, uint addressFamily, string family) {
+            const int MaxTableSize = 64 * 1024 * 1024;
+            var snapshot = new TcpSnapshot { Family = family };
+            int size = 0;
+            try {
+                uint status = GetExtendedTcpTable(IntPtr.Zero, ref size, false, addressFamily, TcpTableOwnerPidAll, 0);
+                for (int attempt = 0; status == ErrorInsufficientBuffer && attempt < 4; attempt++) {
+                    const int RowOffset = sizeof(uint);
+                    if (size < RowOffset || size > MaxTableSize) return snapshot;
+                    int capacity = size;
+                    var table = Marshal.AllocHGlobal(capacity);
+                    try {
+                        status = GetExtendedTcpTable(table, ref size, false, addressFamily, TcpTableOwnerPidAll, 0);
+                        if (status != 0) continue;
+                        bool ipv4 = addressFamily == AddressFamilyIPv4;
+                        var rowType = ipv4 ? typeof(Tcp4Row) : typeof(Tcp6Row);
+                        int rowSize = Marshal.SizeOf(rowType);
+                        int pidOffset = Marshal.OffsetOf(rowType, "Pid").ToInt32();
+                        int rows = Marshal.ReadInt32(table);
+                        if (rows < 0 || rows > (capacity - RowOffset) / rowSize) return snapshot;
+
+                        int bucketCount = TcpStates.Length * TcpCategories.Length;
+                        var totals = new int[bucketCount];
+                        var byPid = new Dictionary<uint, int[]>();
+                        for (int index = 0; index < rows; index++) {
+                            var row = IntPtr.Add(table, RowOffset + index * rowSize);
+                            uint pid = unchecked((uint)Marshal.ReadInt32(row, pidOffset));
+                            if (!pids.Contains(pid)) continue;
+                            uint state, localPort, remotePort;
+                            bool loopback;
+                            if (ipv4) {
+                                var tcp = (Tcp4Row)Marshal.PtrToStructure(row, rowType);
+                                state = tcp.State;
+                                localPort = tcp.LocalPort;
+                                remotePort = tcp.RemotePort;
+                                loopback = (tcp.LocalAddress & 0xff) == 127
+                                    || (state != TcpStateListen && (tcp.RemoteAddress & 0xff) == 127);
+                            } else {
+                                var tcp = (Tcp6Row)Marshal.PtrToStructure(row, rowType);
+                                state = tcp.State;
+                                localPort = tcp.LocalPort;
+                                remotePort = tcp.RemotePort;
+                                loopback = tcp.LocalAddress.IsLoopback()
+                                    || (state != TcpStateListen && tcp.RemoteAddress.IsLoopback());
+                            }
+                            // GetExtendedTcpTable does not define a remote endpoint for a listener.
+                            int category = TcpCategory(loopback, localPort, state == TcpStateListen ? 0 : remotePort);
+                            int stateIndex = state < TcpStates.Length ? (int)state : 0;
+                            int bucket = stateIndex * TcpCategories.Length + category;
+                            int[] counts;
+                            if (!byPid.TryGetValue(pid, out counts)) {
+                                counts = new int[bucketCount];
+                                byPid.Add(pid, counts);
+                            }
+                            counts[bucket]++;
+                            totals[bucket]++;
+                        }
+
+                        for (int bucket = 0; bucket < bucketCount; bucket++) {
+                            string state = TcpStates[bucket / TcpCategories.Length];
+                            string category = TcpCategories[bucket % TcpCategories.Length];
+                            snapshot.Totals.Add(new TcpCount { State = state, Category = category, Count = totals[bucket] });
+                            foreach (var process in byPid) {
+                                int count = process.Value[bucket];
+                                if (count == 0) continue;
+                                snapshot.Counts.Add(new TcpCount { Pid = process.Key, State = state, Category = category, Count = count });
+                            }
+                        }
+                        snapshot.Success = true;
+                        return snapshot;
+                    } finally {
+                        Marshal.FreeHGlobal(table);
+                    }
+                }
+            } catch (DllNotFoundException) {
+            } catch (EntryPointNotFoundException) { }
+            return snapshot;
         }
 
         public static long[] CpuTimes() {
@@ -330,6 +481,9 @@ $metricTypes = [ordered]@{
     codex_host_process_handles                          = 'gauge'
     codex_host_process_io_read_bytes_total               = 'counter'
     codex_host_process_io_write_bytes_total              = 'counter'
+    codex_host_process_tcp_connections                  = 'gauge'
+    codex_host_tcp_connections                          = 'gauge'
+    codex_host_tcp_snapshot_success                      = 'gauge'
     codex_host_cpu_usage_percent                        = 'gauge'
     codex_host_logical_processors                       = 'gauge'
     codex_host_memory_total_bytes                       = 'gauge'
@@ -401,12 +555,16 @@ try {
                 $metricLines[$name] = [Collections.Generic.List[string]]::new()
             }
             $captured = [Diagnostics.Stopwatch]::GetTimestamp()
-            $processes = [CodexObservability.HostProbe]::Collect($desktopRoot, $runtimeCache, $CodexHome.TrimEnd('\'), [uint32]$PID, $previousFamily)
+            $hostSnapshot = [CodexObservability.HostProbe]::Collect($desktopRoot, $runtimeCache, $CodexHome.TrimEnd('\'), [uint32]$PID, $previousFamily)
+            $processes = $hostSnapshot.Processes
             Add-Metric codex_host_process_count $processes.Count
             $currentCpu = @{}
+            $processLabels = @{}
             $previousFamily.Clear()
             foreach ($process in $processes) {
-                $label = '{{process="{0}",pid="{1}",parent_pid="{2}"}}' -f (Escape-LabelValue $process.Name), $process.Pid, $process.Parent
+                $processLabel = 'process="{0}",pid="{1}",parent_pid="{2}"' -f (Escape-LabelValue $process.Name), $process.Pid, $process.Parent
+                $processLabels[$process.Pid] = $processLabel
+                $label = '{' + $processLabel + '}'
                 if ($process.Created -ne 0) { $previousFamily[$process.Pid] = $process.Created }
                 if ($null -ne $process.CpuSeconds) {
                     $key = '{0}-{1}' -f $process.Pid, $process.Created
@@ -424,6 +582,17 @@ try {
                 Add-Metric codex_host_process_handles $process.Handles $label
                 Add-Metric codex_host_process_io_read_bytes_total $process.ReadBytes $label
                 Add-Metric codex_host_process_io_write_bytes_total $process.WriteBytes $label
+            }
+            foreach ($tcp in $hostSnapshot.Tcp) {
+                Add-Metric codex_host_tcp_snapshot_success ([int]$tcp.Success) ('{{family="{0}"}}' -f $tcp.Family)
+                foreach ($bucket in $tcp.Totals) {
+                    $label = '{{family="{0}",state="{1}",category="{2}"}}' -f $tcp.Family, $bucket.State, $bucket.Category
+                    Add-Metric codex_host_tcp_connections $bucket.Count $label
+                }
+                foreach ($bucket in $tcp.Counts) {
+                    $label = '{{{0},family="{1}",state="{2}",category="{3}"}}' -f $processLabels[$bucket.Pid], $tcp.Family, $bucket.State, $bucket.Category
+                    Add-Metric codex_host_process_tcp_connections $bucket.Count $label
+                }
             }
             $previousCpu = $currentCpu
             $previousTime = $captured

@@ -21,6 +21,12 @@
       "targetBlank": false
     },
     {
+      "title": "Connexions et sonde HTTPS",
+      "type": "link",
+      "url": "/d/codex-network",
+      "targetBlank": false
+    },
+    {
       "title": "Usage et latences Codex",
       "type": "link",
       "url": "/d/codex-usage",

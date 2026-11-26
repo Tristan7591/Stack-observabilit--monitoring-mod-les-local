@@ -39,6 +39,8 @@ jobs:
         run: |
           python3 ci/check_release_tree.py
           python3 ci/check_dashboards.py
+          python3 scripts/provider_probe.py --self-test
+          python3 scripts/provider_report.py --self-test
           pwsh -NoProfile -NonInteractive -File ci/check-powershell.ps1
           docker compose config --format json | python3 ci/check_compose.py
 
@@ -49,6 +51,20 @@ jobs:
         run: |
           actionlint
           bash ci/scan-source.sh
+
+  windows-network:
+    name: Windows IPv4 and IPv6 collector
+    needs: validate
+    runs-on: windows-2025
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Verify the TCP collector with local sockets
+        shell: pwsh
+        run: ./scripts/Test-HostNetwork.ps1
 
   build-test-scan:
     name: Buildx, integration test and image scan
@@ -109,7 +125,7 @@ jobs:
           docker run --rm --network codex-observability_default --read-only --cap-drop ALL --security-opt no-new-privileges \
             "$FIXTURE_IMAGE" emit --endpoint http://otel-collector:4318
           pwsh -NoProfile -NonInteractive -File Test-Stack.ps1 -RequireHostMetrics -TimeoutSeconds 90 -MaxHostAgeSeconds 120
-          python3 ci/check_dashboards.py --live
+          python3 ci/check_dashboards.py --live --provider-fixture
           query='http://127.0.0.1:9090/api/v1/query?query=count%28codex_fixture_attempt_success%29'
           docker compose exec -T prometheus wget -q -O - "$query" \
             | jq -e '.data.result[0].value[1] | tonumber == 6' > /dev/null

@@ -1,0 +1,384 @@
+{
+  "title": "Codex · Connexions Windows et sonde HTTPS",
+  "uid": "codex-network",
+  "tags": [
+    "codex",
+    "network"
+  ],
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "État des relevés IPv4 et IPv6",
+      "description": "1 signifie que la table de la famille a pu être lue. 0 indique un échec.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_host_tcp_snapshot_success",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{family}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Sockets TCP établis",
+      "description": "Les catégories regroupent les sockets de la famille Codex. Les ports 443 et 8443 servent de repère et ne révèlent pas le protocole ni le fournisseur.",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (category) (codex_host_tcp_connections{state=\"established\"})",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{category}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "États TCP par famille",
+      "description": "Instantané des sockets dans les états sélectionnés. Les deux extrémités d’une connexion locale peuvent être visibles.",
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (family,state) (codex_host_tcp_connections{state=~\"listen|syn_sent|syn_received|established|close_wait|time_wait\"})",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{family}} · {{state}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Sockets établis par PID",
+      "description": "Sélectionnez un processus pour réduire le nombre de courbes. Deux appels successifs peuvent réutiliser le même socket.",
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (process,pid,category) (codex_host_process_tcp_connections{process=~\"${process:regex}\",state=\"established\"})",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{process}} · {{pid}} · {{category}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Âge de la sonde OpenAI",
+      "description": "Durée depuis le dernier sondage HTTPS volontaire.",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - codex_provider_probe_last_timestamp_seconds",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Code HTTP de la sonde",
+      "description": "401 est normal sur la route sondée sans identifiant. 0 représente une sonde qui n’a pas obtenu de code HTTP.",
+      "gridPos": {
+        "x": 8,
+        "y": 16,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_provider_probe_http_status",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Code de sortie curl",
+      "description": "0 indique un transfert terminé. Ce code mesure la sonde HTTP et ne couvre aucune génération.",
+      "gridPos": {
+        "x": 16,
+        "y": 16,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_provider_probe_curl_exit_code",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "legendFormat": ""
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Mesures de la sonde HTTPS par phase",
+      "description": "DNS, TCP et TLS sont des durées de phase quand disponibles. Premier octet et total sont cumulatifs depuis le démarrage de la requête. La jauge est maintenue entre deux sondes.",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "codex_provider_probe_duration_seconds and on (phase) (codex_provider_probe_phase_available == 1)",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{phase}}"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "title": "Vue d’ensemble",
+      "type": "link",
+      "url": "/d/codex-overview",
+      "targetBlank": false
+    },
+    {
+      "title": "Processus et caches Windows",
+      "type": "link",
+      "url": "/d/codex-windows",
+      "targetBlank": false
+    },
+    {
+      "title": "Requêtes et transport",
+      "type": "link",
+      "url": "/d/codex-requests",
+      "targetBlank": false
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "process",
+        "label": "Processus",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(codex_host_process_tcp_connections, process)",
+        "query": {
+          "query": "label_values(codex_host_process_tcp_connections, process)",
+          "refId": "ProcessVariableQuery"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  }
+}

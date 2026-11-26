@@ -25,7 +25,7 @@ Le profil de la stack utilise des receveurs locaux et des volumes locaux. L’in
 
 ## Exécution sur GitHub Actions
 
-Le workflow [CI](../.github/workflows/ci.yml) fonctionne sur un runner Linux hébergé par GitHub. Il s’exécute lors des pull requests, des pushes sur `main`, sur déclenchement manuel et selon une planification hebdomadaire. Le fichier de métriques Windows, le mot de passe de test et les requêtes OTLP sont générés à neuf. Les scripts de configuration Codex et de collecte Windows sont analysés sans être exécutés sur ce runner. L’intégration utilise une composition isolée, puis retire ses conteneurs et ses volumes temporaires. La variable `CODEX_OBSERVABILITY_RUNTIME_DIR` pointe en CI vers un dossier temporaire du runner.
+Le workflow [CI](../.github/workflows/ci.yml) utilise des runners Linux et Windows hébergés par GitHub. Il s’exécute lors des pull requests, des pushes sur `main`, sur déclenchement manuel et selon une planification hebdomadaire. Le job Linux génère le fichier de métriques Windows, le mot de passe de test et les requêtes OTLP. Il démarre une composition isolée, puis retire ses conteneurs et ses volumes temporaires. Le job Windows valide les relevés TCP avec des connexions synthétiques sur sa propre boucle locale. Aucun job ne configure Codex ou ne contacte le fournisseur de modèles. La variable `CODEX_OBSERVABILITY_RUNTIME_DIR` pointe pour les tests Docker vers un dossier temporaire du runner.
 
 | Étape | Pourquoi |
 | --- | --- |

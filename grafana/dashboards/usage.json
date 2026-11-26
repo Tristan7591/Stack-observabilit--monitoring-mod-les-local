@@ -8,7 +8,7 @@
     "opentelemetry"
   ],
   "schemaVersion": 39,
-  "version": 2,
+  "version": 4,
   "editable": false,
   "graphTooltip": 1,
   "timezone": "browser",
@@ -36,6 +36,13 @@
       "asDropdown": true,
       "keepTime": true,
       "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "title": "Requêtes et transport",
+      "type": "link",
+      "url": "/d/codex-requests",
+      "keepTime": true,
       "targetBlank": false
     },
     {
@@ -1188,7 +1195,7 @@
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_bucket\",model=~\"$model\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_count\",model=~\"$model\"}[$latency_window])) >= 20)",
-          "legendFormat": "Requête WebSocket",
+          "legendFormat": "Envoi WebSocket",
           "instant": false,
           "range": true,
           "refId": "B"

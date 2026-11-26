@@ -1,0 +1,1231 @@
+{
+  "title": "Codex · Requêtes et transport",
+  "uid": "codex-requests",
+  "tags": [
+    "codex",
+    "local"
+  ],
+  "description": "Tentatives et latences de transport instrumentées, flux, retentatives HTTP et traces de requêtes.",
+  "schemaVersion": 39,
+  "version": 2,
+  "editable": false,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "model",
+        "label": "Modèle",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values({job=\"codex-otlp\",__name__=~\"codex_(api_request_total|websocket_(request|connect|continuation)_total|turn_e2e_duration_ms(_milliseconds)?_count)\"}, model)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "latency_window",
+        "label": "Fenêtre des percentiles",
+        "type": "custom",
+        "query": "5m,15m,30m,1h",
+        "includeAll": false,
+        "multi": false,
+        "current": {
+          "selected": true,
+          "text": "15m",
+          "value": "15m"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": true,
+            "text": "15m",
+            "value": "15m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          }
+        ]
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "Vue d’ensemble",
+      "type": "link",
+      "url": "/d/codex-overview",
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "title": "Usage et latences",
+      "type": "link",
+      "url": "/d/codex-usage",
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "title": "Réseau et chemin fournisseur",
+      "type": "link",
+      "url": "/d/codex-network",
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "title": "Évaluation synthétique",
+      "type": "link",
+      "url": "/d/codex-evaluation",
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "title": "Retentatives dans Explore",
+      "type": "link",
+      "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22codex%22%3A%7B%22datasource%22%3A%22loki%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22loki%22%2C%22uid%22%3A%22loki%22%7D%2C%22expr%22%3A%22%7Bservice_name%3D~%5C%22.%2A%5BCc%5Dodex.%2A%5C%22%2Cservice_name%21%3D%5C%22codex-smoke%5C%22%7D+%7C%3D+%5C%22codex.api_request%5C%22+%7C+event_name%3D%5C%22codex.api_request%5C%22+%7C+attempt+%3E+0+%7C+__error__%3D%5C%22%5C%22%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D%7D",
+      "keepTime": true,
+      "targetBlank": false
+    },
+    {
+      "title": "Requêtes dans Tempo",
+      "type": "link",
+      "url": "/explore?schemaVersion=1&orgId=1&panes=%7B%22codex%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22tempo%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22query%22%3A%22%7B+resource.service.name+%3D~+%5C%22.%2A%5BCc%5Dodex.%2A%5C%22+%26%26+resource.service.name+%21%3D+%5C%22codex-smoke%5C%22+%26%26+%28span%3Aname+%3D~+%5C%22responses%5B.%5Dstream%28_request%29%3F%7Cresponses_websocket%5B.%5Dstream_request%5C%22+%7C%7C+span.transport+%3D+%5C%22responses_http%5C%22+%7C%7C+span.transport+%3D+%5C%22responses_websocket%5C%22%29+%7D%22%2C%22tableType%22%3A%22spans%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D%7D",
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Tentatives HTTP",
+      "description": "Variation estimée du compteur client sur la période. Inclut les tentatives ultérieures qui ont été émises.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_total\"}[$__range]))",
+          "editorMode": "code",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 2,
+      "title": "Envois WebSocket",
+      "description": "Variation estimée du compteur client des envois WebSocket sur la période.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_total\"}[$__range]))",
+          "editorMode": "code",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 3,
+      "title": "Ouvertures WebSocket",
+      "description": "Tentatives d’ouverture instrumentées par le client, y compris la connexion initiale.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_total\"}[$__range]))",
+          "editorMode": "code",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 4,
+      "title": "Replis vers HTTP",
+      "description": "Transitions instrumentées du transport WebSocket vers HTTP.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_transport_fallback_to_http_total\"}[$__range]))",
+          "editorMode": "code",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Volume et erreurs",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 6,
+      "title": "Tentatives HTTP par statut",
+      "description": "Le client publie le code HTTP ou la valeur none lorsque la tentative se termine sans code. Une limite de débit peut être observée sous le statut 429.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (status) (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_total\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "{{status}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 7,
+      "title": "Envois et ouvertures WebSocket",
+      "description": "Un envoi réussi signifie que la requête a été envoyée au transport. L’issue du flux de réponse est mesurée à part.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (success) (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_total\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "Envois · succès={{success}}",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (success) (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_total\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "Ouvertures · succès={{success}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 8,
+      "title": "Part des tentatives en échec",
+      "description": "Pour chaque opération, proportion d’échecs parmi les tentatives avec résultat explicite. Les dénominateurs HTTP, envoi et ouverture WebSocket sont distincts.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_total\",success=\"false\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_total\",success=~\"true|false\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_total\",success=~\"true|false\"}[$__rate_interval])) > 0)",
+          "editorMode": "code",
+          "legendFormat": "HTTP",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_total\",success=\"false\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_total\",success=~\"true|false\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_total\",success=~\"true|false\"}[$__rate_interval])) > 0)",
+          "editorMode": "code",
+          "legendFormat": "Envoi WS",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_total\",success=\"false\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_total\",success=~\"true|false\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_total\",success=~\"true|false\"}[$__rate_interval])) > 0)",
+          "editorMode": "code",
+          "legendFormat": "Ouverture WS",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 9,
+      "title": "Événements de flux en échec",
+      "description": "Événements SSE ou WebSocket signalés en échec par le client. Les catégories kind sont fournies par Codex. Une requête peut produire plusieurs événements.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (kind) (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_sse_event_total\",success=\"false\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "SSE · {{kind}}",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (kind) (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_event_total\",success=\"false\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "WebSocket · {{kind}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Latence et couverture",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 11,
+      "title": "Latence HTTP",
+      "description": "Durée d’une tentative HTTP. Pour une réponse en flux, la mesure couvre l’ouverture du flux. Les percentiles sont estimés pour la fenêtre glissante. p50 à partir d’une observation, p95 à partir de vingt.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_duration_ms(_milliseconds)?_bucket\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_duration_ms(_milliseconds)?_count\"}[$latency_window])) >= 1)",
+          "editorMode": "code",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_duration_ms(_milliseconds)?_bucket\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_duration_ms(_milliseconds)?_count\"}[$latency_window])) >= 20)",
+          "editorMode": "code",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 12,
+      "title": "Latence d’envoi WebSocket",
+      "description": "Délai client d’envoi sur une connexion WebSocket, depuis la mise en file. Les percentiles sont estimés pour la fenêtre glissante. p50 à partir d’une observation, p95 à partir de vingt.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_bucket\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_count\"}[$latency_window])) >= 1)",
+          "editorMode": "code",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_bucket\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_count\"}[$latency_window])) >= 20)",
+          "editorMode": "code",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 13,
+      "title": "Latence d’ouverture WebSocket",
+      "description": "Durée d’une tentative d’établissement de connexion WebSocket. Les percentiles sont estimés pour la fenêtre glissante. p50 à partir d’une observation, p95 à partir de vingt.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_duration_ms(_milliseconds)?_bucket\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_duration_ms(_milliseconds)?_count\"}[$latency_window])) >= 1)",
+          "editorMode": "code",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_duration_ms(_milliseconds)?_bucket\"}[$latency_window]))) and (sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_duration_ms(_milliseconds)?_count\"}[$latency_window])) >= 20)",
+          "editorMode": "code",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 14,
+      "title": "Observations par histogramme",
+      "description": "Effectifs estimés sur la même fenêtre glissante que les percentiles. Les séries apparaissent quand la version du client publie les mesures.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_api_request_duration_ms(_milliseconds)?_count\"}[$latency_window]))",
+          "editorMode": "code",
+          "legendFormat": "HTTP",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_request_duration_ms(_milliseconds)?_count\"}[$latency_window]))",
+          "editorMode": "code",
+          "legendFormat": "Envoi WS",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_duration_ms(_milliseconds)?_count\"}[$latency_window]))",
+          "editorMode": "code",
+          "legendFormat": "Ouverture WS",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 30,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Relances et réutilisation du contexte",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 16,
+      "title": "Retentatives HTTP observées",
+      "description": "Événements codex.api_request avec un index de tentative strictement positif. L’index commence à zéro dans la boucle de transport. Les relances externes à cette boucle ont une couverture distincte.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({service_name=~\".*[Cc]odex.*\",service_name!=\"codex-smoke\"} |= \"codex.api_request\" | event_name=\"codex.api_request\" | model =~ \"$model\" | attempt > 0 | __error__=\"\" | keep service_name [$__interval]))",
+          "editorMode": "code",
+          "legendFormat": "Retentatives par intervalle",
+          "queryType": "range"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 17,
+      "title": "Replis de transport et réauthentifications",
+      "description": "Un repli HTTP signale une bascule de transport. La réauthentification correspond ici aux tentatives WebSocket portant le champ reauth=true.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_transport_fallback_to_http_total\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "Repli HTTP",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_connect_total\",reauth=\"true\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "Ouverture WS avec réauthentification",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 39,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 18,
+      "title": "Envois WebSocket en mode contexte complet",
+      "description": "En mode full, Codex envoie une requête complète. Les motifs incluent des cas attendus comme le premier envoi. phase=generation retire le préchauffage.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: /min",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (reason) (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_continuation_total\",phase=\"generation\",mode=\"full\"}[$__rate_interval])) * 60",
+          "editorMode": "code",
+          "legendFormat": "{{reason}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 19,
+      "title": "Part du mode contexte complet",
+      "description": "Part des envois de génération en mode full parmi les envois full et incremental. Indicateur de réutilisation du contexte WebSocket. Le volume de tokens et la facturation se mesurent avec d’autres signaux.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 9,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_continuation_total\",phase=\"generation\",mode=\"full\"}[$__rate_interval])) or (0 * sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_continuation_total\",phase=\"generation\",mode=~\"full|incremental\"}[$__rate_interval])))) / (sum (rate({job=\"codex-otlp\",model=~\"$model\",__name__=~\"codex_websocket_continuation_total\",phase=\"generation\",mode=~\"full|incremental\"}[$__rate_interval])) > 0)",
+          "editorMode": "code",
+          "legendFormat": "Mode complet",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 47,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Investigation des requêtes · tous modèles",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 21,
+      "title": "Spans de requêtes dans Tempo",
+      "description": "Sélectionnez un ID de trace pour ouvrir la chronologie. La recherche cible les spans de transport observés et reste globale. Certains clients ou versions produisent moins de spans.",
+      "type": "table",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.service.name =~ \".*[Cc]odex.*\" && resource.service.name != \"codex-smoke\" && (span:name =~ \"responses[.]stream(_request)?|responses_websocket[.]stream_request\" || span.transport = \"responses_http\" || span.transport = \"responses_websocket\") }",
+          "limit": 25,
+          "spss": 3,
+          "tableType": "spans",
+          "filters": []
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 24,
+        "h": 10
+      }
+    },
+    {
+      "id": 22,
+      "title": "Tokens observés à la fin d’une réponse",
+      "description": "Spans completed dont le client publie le nombre de tokens d’entrée. Les valeurs de cache, de sortie et de raisonnement restent vides si l’attribut correspondant manque. Cliquez sur un ID pour examiner le span dans sa trace et replacer la mesure dans la chronologie du tour.",
+      "type": "table",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—"
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.service.name =~ \".*[Cc]odex.*\" && resource.service.name != \"codex-smoke\" && span:name = \"completed\" && span.gen_ai.usage.input_tokens >= 0 } | select(span.gen_ai.usage.input_tokens, span.gen_ai.usage.cache_read.input_tokens, span.gen_ai.usage.output_tokens, span.codex.usage.reasoning_output_tokens)",
+          "limit": 25,
+          "spss": 10,
+          "tableType": "spans",
+          "filters": []
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 66,
+        "w": 24,
+        "h": 10
+      }
+    }
+  ]
+}

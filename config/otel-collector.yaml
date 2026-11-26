@@ -16,7 +16,7 @@ processors:
     error_mode: propagate
     log_statements:
       - keep_keys(resource.attributes, ["service.name", "service.version", "deployment.environment", "deployment.environment.name", "env"])
-      - 'keep_keys(log.attributes, ["event.name", "event.kind", "event.timestamp", "conversation.id", "app.version", "model", "model_provider", "duration_ms", "status", "success", "http.response.status_code", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "tool_token_count", "total_token_count", "tool_name", "tool_namespace", "call_id", "tool_result_seq", "event_type", "source", "transport", "attempt", "retry_count", "decision"])'
+      - 'keep_keys(log.attributes, ["event.name", "event.kind", "event.timestamp", "conversation.id", "app.version", "model", "model_provider", "duration_ms", "ttft_ms", "status", "success", "http.response.status_code", "auth.request_id", "auth.connection_reused", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "tool_token_count", "total_token_count", "tool_name", "tool_namespace", "call_id", "tool_result_seq", "event_type", "source", "transport", "attempt", "retry_count", "decision"])'
       - set(log.body, "codex.event")
       - set(log.body, log.attributes["event.name"]) where IsString(log.attributes["event.name"]) and IsMatch(log.attributes["event.name"], "^codex[.][a-zA-Z0-9_.-]+$")
     trace_statements:
@@ -25,16 +25,16 @@ processors:
           - keep_keys(resource.attributes, ["service.name", "service.version", "deployment.environment", "deployment.environment.name", "env"])
       - context: span
         statements:
-          - 'keep_keys(span.attributes, ["conversation.id", "codex.conversation.id", "codex.turn.id", "turn.id", "call_id", "tool_name", "tool.name", "gen_ai.tool.name", "gen_ai.operation.name", "gen_ai.request.model", "gen_ai.response.model", "gen_ai.provider.name", "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_write.input_tokens", "codex.usage.reasoning_output_tokens", "codex.usage.total_tokens", "model", "duration_ms", "http.request.method", "http.response.status_code", "status", "success", "error.type", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "tool_token_count", "total_token_count", "source", "transport"])'
+          - 'keep_keys(span.attributes, ["conversation.id", "codex.conversation.id", "thread.id", "codex.turn.id", "turn.id", "call_id", "tool_name", "tool.name", "gen_ai.tool.name", "gen_ai.operation.name", "gen_ai.request.model", "gen_ai.response.model", "gen_ai.provider.name", "gen_ai.response.id", "openai.request.id", "openai.client.request.id", "auth.request_id", "auth.connection_reused", "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_write.input_tokens", "codex.usage.reasoning_output_tokens", "codex.usage.total_tokens", "codex.response.receive_wait_ms", "codex.turn.token_usage.input_tokens", "codex.turn.token_usage.cached_input_tokens", "codex.turn.token_usage.cache_write_input_tokens", "codex.turn.token_usage.non_cached_input_tokens", "codex.turn.token_usage.output_tokens", "codex.turn.token_usage.reasoning_output_tokens", "codex.turn.token_usage.total_tokens", "model", "duration_ms", "ttft_ms", "http.request.method", "http.response.status_code", "network.protocol.version", "network.probe.exit_code", "network.probe.name_lookup_ms", "network.probe.tcp_connect_ms", "network.probe.tls_handshake_ms", "network.probe.time_to_first_byte_ms", "network.probe.total_ms", "status", "success", "error.type", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "tool_token_count", "total_token_count", "source", "transport"])'
           - set(span.name, "codex.span") where not IsMatch(span.name, "^[a-zA-Z0-9_.:/-]{1,160}$")
           - set(span.status.message, "")
       - context: spanevent
         statements:
           - set(spanevent.name, "codex.span_event")
-          - keep_keys(spanevent.attributes, ["event.name", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "total_token_count", "error.type"])
+          - keep_keys(spanevent.attributes, ["event.name", "input_token_count", "output_token_count", "cached_token_count", "cache_write_token_count", "reasoning_token_count", "total_token_count", "error.type", "retry.attempt", "retry.delay_ms", "retry.layer"])
     metric_statements:
       - keep_keys(resource.attributes, ["service.name", "service.version", "service.instance.id", "process.pid", "deployment.environment", "deployment.environment.name", "env"])
-      - delete_matching_keys(datapoint.attributes, "(?i)^(user[._]|account[._]|host[._]|conversation[._]|prompt$|arguments$|output$|error[.]message$|command([._]|$)|url([._]|$)|path([._]|$))")
+      - delete_matching_keys(datapoint.attributes, "(?i)^(user[._]|account[._]|host[._]|conversation[._]|auth[._]request[._]id$|openai[._](client[._])?request[._]id$|gen_ai[._]response[._]id$|prompt$|arguments$|output$|error[.]message$|command([._]|$)|url([._]|$)|path([._]|$))")
   batch:
     timeout: 1s
     send_batch_size: 512
