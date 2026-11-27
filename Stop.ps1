@@ -4,7 +4,7 @@ param([switch]$RemoveContainers)
 $ErrorActionPreference = 'Stop'
 $runtimePath = $env:CODEX_OBSERVABILITY_RUNTIME_DIR
 if (!$runtimePath) { $runtimePath = Join-Path $env:LOCALAPPDATA 'CodexObservability' }
-$composeArguments = @('compose', '--project-directory', $PSScriptRoot, '--file', (Join-Path $PSScriptRoot 'compose.yaml'))
+$composeArguments = @('compose', '--profile', 'advisor', '--project-directory', $PSScriptRoot, '--file', (Join-Path $PSScriptRoot 'compose.yaml'))
 $statePath = Join-Path $runtimePath 'host-collector.json'
 $metricsPath = Join-Path $runtimePath 'metrics\host.prom'
 

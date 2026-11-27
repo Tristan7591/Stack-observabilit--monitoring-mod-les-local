@@ -5,7 +5,7 @@ fixture="${FIXTURE_IMAGE:?}"
 cache_dir="${RUNNER_TEMP:?}/trivy-cache"
 report="$(mktemp "$RUNNER_TEMP/image-report.XXXXXX")"
 trap 'rm -f -- "$report"' EXIT
-refs="$(docker compose config --images)"
+refs="$(docker compose --profile advisor config --images)"
 mapfile -t images < <(printf '%s\n%s\n' "$refs" "$fixture" | sort -u)
 trivy image --cache-dir "$cache_dir" --quiet --download-db-only
 

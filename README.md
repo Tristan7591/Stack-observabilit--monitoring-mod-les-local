@@ -29,6 +29,7 @@ Connectez-vous à [Grafana](http://127.0.0.1:3000) avec l’identifiant `admin`.
 - [Catalogue et interprétation des métriques](docs/mesures.md)
 - [Réseau, requêtes fournisseur et rapport de consommation](docs/reseau-et-requetes.md)
 - [Exploitation, mise à niveau et dépannage](docs/exploitation.md)
+- [Conseiller local, remédiation et préparation à la production](docs/conseiller-local.md)
 - [Scénarios d’évaluation et critères de réussite](docs/evaluation.md)
 - [GitHub Actions, images Docker et confidentialité](docs/ci-et-confidentialite.md)
 

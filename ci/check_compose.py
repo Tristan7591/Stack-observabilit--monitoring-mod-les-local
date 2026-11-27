@@ -19,8 +19,19 @@ def require(condition, reason):
 
 model = json.load(sys.stdin)
 for name, service in model["services"].items():
-    require(IMAGE_REF.fullmatch(service.get("image", "")), f"Unpinned image for {name}")
-    require(not service.get("build"), f"Unexpected build context for {name}")
+    if name == "advisor":
+        build = service.get("build", {})
+        require(service.get("image") == "codex-observability-advisor:local", "Unexpected advisor image")
+        require(Path(build["context"]).resolve() == ROOT / "advisor" and build.get("network") == "none", "Unsafe advisor build")
+        require(set(service.get("profiles", [])) == {"advisor"}, "Advisor must remain opt-in")
+        require(service.get("read_only") and set(service.get("cap_drop", [])) == {"ALL"}, "Unsafe advisor runtime")
+        require(not service.get("ports") and not service.get("secrets"), "Unexpected advisor access")
+        require(set(service.get("networks", {})) == {"advisor-net"} and model["networks"]["advisor-net"].get("internal"), "Advisor network is not internal")
+        for volume in service.get("volumes", []):
+            require(volume["type"] == "volume" and volume["source"] == "advisor-reports" and volume["target"] == "/reports", "Unexpected advisor mount")
+    else:
+        require(IMAGE_REF.fullmatch(service.get("image", "")), f"Unpinned image for {name}")
+        require(not service.get("build"), f"Unexpected build context for {name}")
     for field in ("privileged", "devices", "cap_add"):
         require(not service.get(field), f"Unexpected {field} for {name}")
     for field in ("network_mode", "pid", "ipc", "userns_mode"):

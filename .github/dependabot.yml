@@ -12,3 +12,7 @@ updates:
     directory: /fixtures
     schedule:
       interval: weekly
+  - package-ecosystem: docker
+    directory: /advisor
+    schedule:
+      interval: weekly

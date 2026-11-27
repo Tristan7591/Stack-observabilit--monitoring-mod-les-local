@@ -41,8 +41,10 @@ jobs:
           python3 ci/check_dashboards.py
           python3 scripts/provider_probe.py --self-test
           python3 scripts/provider_report.py --self-test
+          python3 -B advisor/engine.py --self-test
+          python3 -B advisor/main.py --self-test
           pwsh -NoProfile -NonInteractive -File ci/check-powershell.ps1
-          docker compose config --format json | python3 ci/check_compose.py
+          docker compose --profile advisor config --format json | python3 ci/check_compose.py
 
       - name: Set up pinned scanners
         run: bash ci/install-tools.sh actionlint trivy
@@ -91,7 +93,9 @@ jobs:
           driver-opts: image=moby/buildkit:v0.35.1@sha256:baf6138eb8c37644800c7c913fba051e840ebb9ba13eaf92d92ef9a1712d0b4c
 
       - name: Validate the fixture Dockerfile
-        run: docker buildx build --check --file fixtures/Dockerfile fixtures
+        run: |
+          docker buildx build --check --file fixtures/Dockerfile fixtures
+          docker buildx build --check --file advisor/Dockerfile advisor
 
       - name: Build the local synthetic fixture image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -116,6 +120,11 @@ jobs:
           docker compose run --rm --no-deps --entrypoint /bin/promtool prometheus check config /etc/prometheus/prometheus.yml
           docker compose run --rm --no-deps otel-collector validate --config=/etc/otelcol-contrib/config.yaml
 
+      - name: Build and test the local advisor without network access
+        run: |
+          docker buildx build --network none --provenance=false --load --tag codex-observability-advisor:local advisor
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges codex-observability-advisor:local --self-test
+
       - name: Start the disposable stack and verify synthetic telemetry
         run: |
           docker compose up --detach --no-build --pull never --wait --wait-timeout 90
@@ -130,6 +139,11 @@ jobs:
           docker compose exec -T prometheus wget -q -O - "$query" \
             | jq -e '.data.result[0].value[1] | tonumber == 6' > /dev/null
 
+      - name: Check advisor recommendations against synthetic telemetry
+        run: |
+          docker compose --profile advisor up --detach --no-build --pull never --wait --wait-timeout 90 advisor
+          python3 ci/check_advisor.py
+
       - name: Set up pinned image scanner
         if: ${{ !cancelled() }}
         run: bash ci/install-tools.sh trivy
@@ -140,4 +154,4 @@ jobs:
 
       - name: Remove synthetic containers and volumes
         if: ${{ always() }}
-        run: docker compose down --volumes --remove-orphans
+        run: docker compose --profile advisor down --volumes --remove-orphans

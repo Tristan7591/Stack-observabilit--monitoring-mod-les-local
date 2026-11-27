@@ -37,6 +37,7 @@ services:
 
   prometheus:
     <<: *defaults
+    networks: [default, advisor-net]
     image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -68,6 +69,7 @@ services:
 
   loki:
     <<: *defaults
+    networks: [default, advisor-net]
     image: grafana/loki:3.6.22@sha256:4cf4ceb20e88b0543c88b541a71797c22a46eade04dd588dcdebf9f2b9c36063
     command: [-config.file=/etc/loki/local-config.yaml]
     volumes:
@@ -97,6 +99,35 @@ services:
         bind:
           create_host_path: false
 
+  advisor:
+    <<: *defaults
+    profiles: [advisor]
+    image: codex-observability-advisor:local
+    build:
+      context: ./advisor
+      network: none
+    environment:
+      ADVISOR_INTERVAL_SECONDS: '${ADVISOR_INTERVAL_SECONDS:-300}'
+      ADVISOR_WINDOW_MINUTES: '${ADVISOR_WINDOW_MINUTES:-30}'
+    networks: [advisor-net]
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    read_only: true
+    cap_drop: [ALL]
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 32
+    volumes:
+      - advisor-reports:/reports
+
+networks:
+  default: {}
+  advisor-net:
+    internal: true
+
 secrets:
   grafana_admin_password:
     file: '${CODEX_OBSERVABILITY_RUNTIME_DIR:-${LOCALAPPDATA:-.}/CodexObservability}/grafana-admin-password.txt'
@@ -106,3 +137,4 @@ volumes:
   prometheus-data:
   loki-data:
   tempo-data:
+  advisor-reports:

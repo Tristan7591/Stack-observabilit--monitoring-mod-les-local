@@ -13,7 +13,7 @@ ALLOWED_PATH = re.compile(
     r"config/[^/]+\.ya?ml|grafana/dashboards/[^/]+\.json|"
     r"grafana/provisioning/(?:dashboards|datasources)/[^/]+\.ya?ml|"
     r"scripts/[^/]+\.(?:ps1|py)|ci/[^/]+\.(?:py|sh|ps1|ya?ml)|"
-    r"fixtures/(?:Dockerfile|\.dockerignore|[^/]+\.py))"
+    r"fixtures/(?:Dockerfile|\.dockerignore|[^/]+\.py)|advisor/(?:Dockerfile|\.dockerignore|main\.py|engine\.py))"
 )
 SENSITIVE_NAME = re.compile(
     r"(?:^|[./_-])(?:auth|credential|password|session[_-]index|secret|rollout|transcript)"
